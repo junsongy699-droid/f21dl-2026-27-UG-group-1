@@ -26,6 +26,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import warnings
+# Suppress unnecessary pandas warnings for cleaner output
 warnings.filterwarnings("ignore")
 
 # ========== Global Configuration ==========
@@ -47,8 +48,12 @@ BASE_DIR = find_project_root()
 DATA_DIR = BASE_DIR / "data"
 OUTPUT_DIR = BASE_DIR / "data" / "processed"
 TABLE_DIR = BASE_DIR / "output" / "tables"
+# Ensure output directories exist
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 TABLE_DIR.mkdir(parents=True, exist_ok=True)
 
 def resolve_csv(keyword_hint):
-    # """CSV Fuzzy Matching"""
+   """CSV Fuzzy Matching"""
+
+
+ 
