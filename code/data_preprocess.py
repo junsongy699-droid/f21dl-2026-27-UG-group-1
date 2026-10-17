@@ -53,7 +53,26 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 TABLE_DIR.mkdir(parents=True, exist_ok=True)
 
 def resolve_csv(keyword_hint):
-   """CSV Fuzzy Matching"""
+    """
+    Fuzzy match CSV files in the data directory. 
+    Provides detailed error messages if files are missing or ambiguous.
+    """
+    matches = list(DATA_DIR.glob(f"*{keyword_hint}*.csv"))
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise FileNotFoundError(
+            f"Multiple matches for '{keyword_hint}' in data/: {[m.name for m in matches]}\n"
+            "Please specify exact filename."
+        )
+    all_files = [f.name for f in DATA_DIR.glob("*.csv")] if DATA_DIR.exists() else []
+    raise FileNotFoundError(
+        f"No CSV matching '{keyword_hint}' found in {DATA_DIR}\n"
+        f"Available CSV files: {all_files}"
+    )
 
+def find_popularity_column(df):
+    """Safely locate the target column 'popularity', providing fallback options."""
 
- 
+def preprocess_dataset(df, leakage_cols, dataset_name):
+    """Core data cleaning pipeline for a single dataset."""  
