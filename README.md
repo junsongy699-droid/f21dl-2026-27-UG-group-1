@@ -17,9 +17,13 @@ Both datasets are stored in the `data/` folder.
 
 ### Repository Structure
 
-├── code/        # Python scripts for preprocessing, EDA, modelling   and neural networks
+├── code/    
+|    ├── data_explore.py          # EDA (Step 1-5, leakage detection correlation)
+│    ├── data_preprocess.py
+|    # Python scripts for preprocessing, EDA, modelling   and neural networks
 ├── data/          # Raw and cleaned datasets
-├── output/        # Generated tables, figures and evaluation results
+├── output/tables/        # Generated tables, figures and evaluation 
+     └── preprocessing_report.md
 └── README.md
 
 
@@ -42,7 +46,30 @@ In accordance with the F20DL GenAI policy:
 | Member 2: He Zexin | Modelling & Evaluation | Baseline models, MLP implementation, evaluation metrics (R3, R4) |
 | Member 3: Huang Guanyin | Report & Repository | Report writing, repository maintenance, documentation (D2) |
 
+### Data Preprocessing Pipeline (Member 1)
+The preprocessing script (`code/data_preprocess.py`) performs:
+- **Deduplication**: removes exact duplicate rows to prevent train-test leakage
+- **Target handling**: drops rows with missing `popularity` (never imputed)
+- **Leakage removal**: exact-match exclusion of 6 columns in D1 
+  (`artist_popularity`, `streams`, `pos`, `stream_change`, `7day`, `viral_score`)
+  and 1 column in D2 (`artist_popularity`)
+- **Imputation**: numeric → median, categorical → 'unknown' (163 missing genres handled)
+- **Encoding**: label-encoded `genre` column as reference for MLP
+- **Reproducibility**: fixed random seed 42, pathlib auto-detection, fuzzy CSV matching
+
+### Data Preprocessing Pipeline (Member 2)
+
+### Data Preprocessing Pipeline (Member 3)
+
+Outputs: `data/processed/D1_clean.csv`, `D2_clean.csv`, 
+`output/tables/R2_preprocessing_report.md`
+
 ### How to Run
 1. Clone the repository
 2. Install dependencies: `pip install pandas numpy scikit-learn matplotlib seaborn`
 3. Run scripts from the `code/` folder in order: `data_explore.py` → `preprocessing.py` → `modelling.py` → `mlp.py`
+
+### Known Limitations
+- D1 and D2 popularity ranges differ (0–92 vs 0–90) due to API collection timing
+- Label encoding on genre implies ordinality; One-Hot recommended for MLP
+- D1 explicit class imbalance (222:778) may affect classification baselines
