@@ -61,7 +61,7 @@ The preprocessing script (`code/data_preprocess.py`) performs:
 
 ### Data Preprocessing Pipeline (Member 3)
 
-Outputs: `data/processed/D1_clean.csv`, `D2_clean.csv`, 
+### Outputs:`data/processed/D1_clean.csv`, `D2_clean.csv`, 
 `output/tables/R2_preprocessing_report.md`
 
 ### How to Run

@@ -73,6 +73,27 @@ def resolve_csv(keyword_hint):
 
 def find_popularity_column(df):
     """Safely locate the target column 'popularity', providing fallback options."""
+    # Exact match (case-insensitive) preferred
+    candidates = [c for c in df.columns if c.lower().strip() == "popularity"]
+    if len(candidates) == 1:
+        return candidates[0]
+    
+    # Fallback: substring match
+    candidates = [c for c in df.columns if "popularity" in c.lower()]
+    if len(candidates) >= 1:
+        return candidates[0]
+        
+    raise ValueError(
+        "Cannot find target column 'popularity' in dataset.\n"
+        f"Available columns: {list(df.columns)}"
+    )
 
 def preprocess_dataset(df, leakage_cols, dataset_name):
     """Core data cleaning pipeline for a single dataset."""  
+    report_lines = [f"## {dataset_name}", ""]
+    
+    initial_rows, initial_cols = df.shape
+    report_lines.append(f"- **Initial shape**: {initial_rows} rows × {initial_cols} columns")
+
+
+    
