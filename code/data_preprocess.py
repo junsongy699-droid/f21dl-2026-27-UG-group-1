@@ -95,5 +95,35 @@ def preprocess_dataset(df, leakage_cols, dataset_name):
     initial_rows, initial_cols = df.shape
     report_lines.append(f"- **Initial shape**: {initial_rows} rows × {initial_cols} columns")
 
+    # Remove duplicate rows
+    df = df.drop_duplicates().reset_index(drop=True)
+    dup_removed = initial_rows - len(df)
+    report_lines.append(f"- **Duplicates removed**: {dup_removed} rows")
 
+    #  Drop rows with missing target variable (Never impute the target)
+    pop_col = find_popularity_column(df)
+    before_target = len(df)
+    df = df.dropna(subset=[pop_col]).reset_index(drop=True)
+    target_dropped = before_target - len(df)
+    report_lines.append(f"- **Missing target dropped**: {target_dropped} rows (column: `{pop_col}`)")
+
+    # Remove leakage features (exact match)
+    dropped_leakage = []
+    for col in leakage_cols:
+        if col in df.columns:
+            df = df.drop(columns=[col])
+            dropped_leakage.append(col)
+    report_lines.append(
+        f"- **Leakage features removed**: {', '.join(dropped_leakage) if dropped_leakage else 'None'}"
+    )
+
+    # Next steps: Missing value imputation and encoding will be added in the next commit ---
     
+    return df, report_lines
+
+if __name__ == "__main__":
+    path_d1 = resolve_csv("global_trends")
+    df1 = pd.read_csv(path_d1)
+    df1_clean, report = preprocess_dataset(df1, LEAKAGE_EXACT_D1, "D1")
+    print("Cleaning report:", report)
+    print(df1_clean.head())
