@@ -1,42 +1,28 @@
 """
-F20DL Spotify Project - Data Preprocessing Script (R2 Deliverable)
+F20DL Spotify Project - Data Preprocessing Script (Single Dataset)
 AI Usage Declaration:
-This script was iteratively refined with GenAI assistance based on code review.
-Full prompt used for generation:
-"Write a robust data preprocessing script for F20DL Spotify popularity prediction project.
-Requirements:
-- Two datasets D1 (global trends) and D2 (tracks metadata)
-- Remove duplicates
-- Drop rows with missing target variable (popularity), never fill target
-- Drop known leakage features with exact match, avoid false positive deletion
-- Fill numeric missing values with median, categorical with 'unknown'
-- Output genre label-encoded column as reference
-- Generate full markdown preprocessing report for R2 write-up
-- Generate popularity range record text file
-- Auto-detect CSV filenames with fuzzy matching
-- Add friendly error messages for missing columns
-- Use pathlib for all paths, fixed random seed 42
-- Include full AI usage declaration per course policy"
-All logic, rules and output paths were manually reviewed and validated by group members.
+This script was iteratively refined with GenAI assistance. 
+All logic, parameters, and output paths manually reviewed.
 """
-
-
-
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import warnings
-# Suppress unnecessary pandas warnings for cleaner output
 warnings.filterwarnings("ignore")
 
-# ========== Global Configuration ==========
 RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
 
-LEAKAGE_EXACT_D1 = ["artist_popularity", "streams", "pos", "stream_change", "7day", "viral_score"]
-LEAKAGE_EXACT_D2 = ["artist_popularity"]
+# Drop columns that cause data leakage or model errors
+LEAKAGE_EXACT = [
+    "Unnamed: 0",         # CSV index column
+    "artist_popularity",  # Severe data leakage (highly correlated with target)
+    "artist_url",         # Useless URL text
+    "artist_name",        # Text column
+    "track_name",         # Text column
+    "album_name"          # Text column
+]
 
-# ========== Automatic Path Localization ==========
 def find_project_root(start=None):
     current = (start or Path(__file__).resolve()).parent
     for p in [current, *current.parents]:
@@ -48,82 +34,94 @@ BASE_DIR = find_project_root()
 DATA_DIR = BASE_DIR / "data"
 OUTPUT_DIR = BASE_DIR / "data" / "processed"
 TABLE_DIR = BASE_DIR / "output" / "tables"
-# Ensure output directories exist
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 TABLE_DIR.mkdir(parents=True, exist_ok=True)
 
-def resolve_csv(keyword_hint):
-    """
-    Fuzzy match CSV files in the data directory. 
-    Provides detailed error messages if files are missing or ambiguous.
-    """
-    matches = list(DATA_DIR.glob(f"*{keyword_hint}*.csv"))
-    if len(matches) == 1:
-        return matches[0]
-    if len(matches) > 1:
-        raise FileNotFoundError(
-            f"Multiple matches for '{keyword_hint}' in data/: {[m.name for m in matches]}\n"
-            "Please specify exact filename."
-        )
-    all_files = [f.name for f in DATA_DIR.glob("*.csv")] if DATA_DIR.exists() else []
-    raise FileNotFoundError(
-        f"No CSV matching '{keyword_hint}' found in {DATA_DIR}\n"
-        f"Available CSV files: {all_files}"
-    )
-
 def find_popularity_column(df):
-    """Safely locate the target column 'popularity', providing fallback options."""
-    # Exact match (case-insensitive) preferred
-    candidates = [c for c in df.columns if c.lower().strip() == "popularity"]
-    if len(candidates) == 1:
+    """Safely locate the target column, hardcoded to track_popularity."""
+    if "track_popularity" in df.columns:
+        return "track_popularity"
+    # Fallback if naming changed
+    candidates = [c for c in df.columns if "popularity" in c.lower() and "artist" not in c.lower()]
+    if len(candidates) > 0:
         return candidates[0]
-    
-    # Fallback: substring match
-    candidates = [c for c in df.columns if "popularity" in c.lower()]
-    if len(candidates) >= 1:
-        return candidates[0]
-        
-    raise ValueError(
-        "Cannot find target column 'popularity' in dataset.\n"
-        f"Available columns: {list(df.columns)}"
-    )
+    raise ValueError("Cannot find target column 'track_popularity'.")
 
-def preprocess_dataset(df, leakage_cols, dataset_name):
-    """Core data cleaning pipeline for a single dataset."""  
-    report_lines = [f"## {dataset_name}", ""]
-    
+def preprocess_dataset(df):
+    """Core data cleaning pipeline."""
+    report_lines = []
     initial_rows, initial_cols = df.shape
-    report_lines.append(f"- **Initial shape**: {initial_rows} rows × {initial_cols} columns")
+    report_lines.append(f"- **Initial shape**: {initial_rows} rows x {initial_cols} columns")
 
-    # Remove duplicate rows
+    # 1. Remove duplicates
     df = df.drop_duplicates().reset_index(drop=True)
     dup_removed = initial_rows - len(df)
     report_lines.append(f"- **Duplicates removed**: {dup_removed} rows")
 
-    #  Drop rows with missing target variable (Never impute the target)
+    # 2. Drop rows with missing target
     pop_col = find_popularity_column(df)
     before_target = len(df)
     df = df.dropna(subset=[pop_col]).reset_index(drop=True)
     target_dropped = before_target - len(df)
     report_lines.append(f"- **Missing target dropped**: {target_dropped} rows (column: `{pop_col}`)")
 
-    # Remove leakage features (exact match)
-    dropped_leakage = []
-    for col in leakage_cols:
+    # 3. Remove leakage / useless text columns
+    dropped_cols = []
+    for col in LEAKAGE_EXACT:
         if col in df.columns:
             df = df.drop(columns=[col])
-            dropped_leakage.append(col)
-    report_lines.append(
-        f"- **Leakage features removed**: {', '.join(dropped_leakage) if dropped_leakage else 'None'}"
-    )
+            dropped_cols.append(col)
+    report_lines.append(f"- **Leakage/Text features removed**: {', '.join(dropped_cols)}")
 
-    # Next steps: Missing value imputation and encoding will be added in the next commit ---
-    
+    # 4. Feature Engineering: Release Date -> Release Year
+    if "release_date" in df.columns:
+        df["release_year"] = pd.to_datetime(df["release_date"], errors="coerce").dt.year
+        # Fill NaNs resulting from date parsing errors
+        df["release_year"] = df["release_year"].fillna(df["release_year"].median())
+        df = df.drop(columns=["release_date"])
+        report_lines.append("- **Feature Engineering**: Extracted `release_year` from `release_date`")
+
+    # 5. Handle Missing Values
+    num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
+
+    num_missing_total = int(df[num_cols].isnull().sum().sum())
+    for col in num_cols:
+        if df[col].isnull().sum() > 0:
+            df[col] = df[col].fillna(df[col].median())
+
+    cat_missing_total = int(df[cat_cols].isnull().sum().sum())
+    for col in cat_cols:
+        if df[col].isnull().sum() > 0:
+            df[col] = df[col].fillna("unknown")
+
+    report_lines.append(f"- **Missing values filled**: {num_missing_total} numeric (median), {cat_missing_total} categorical ('unknown')")
+
+    final_rows, final_cols = df.shape
+    report_lines.append(f"- **Final shape**: {final_rows} rows x {final_cols} columns")
+
     return df, report_lines
 
+def main():
+    path = DATA_DIR / "spotifydataset.csv"
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+
+    print(f"Loading {path.name}...")
+    df_raw = pd.read_csv(path)
+    
+    df_clean, report = preprocess_dataset(df_raw)
+    
+    # Save outputs
+    out_path = OUTPUT_DIR / "D1_clean.csv"
+    df_clean.to_csv(out_path, index=False)
+    
+    print("\n--- Cleaning Report ---")
+    for line in report:
+        print(line)
+        
+    print(f"\n[SUCCESS] Cleaned data saved to {out_path}")
+    print(f"Columns in cleaned dataset: {list(df_clean.columns)}")
+
 if __name__ == "__main__":
-    path_d1 = resolve_csv("global_trends")
-    df1 = pd.read_csv(path_d1)
-    df1_clean, report = preprocess_dataset(df1, LEAKAGE_EXACT_D1, "D1")
-    print("Cleaning report:", report)
-    print(df1_clean.head())
+    main()
