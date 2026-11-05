@@ -1,0 +1,3 @@
+Task,Best Params,CV Score,Test RMSE,Test MAE,Test R2,Test Accuracy,Test Precision,Test Recall,Test F1
+Regression,"{'mlp__alpha': 0.01, 'mlp__hidden_layer_sizes': (100,), 'mlp__learning_rate_init': 0.01}",21.592866554771884,18.881512852567234,13.630938007581396,0.23337117371105232,,,,
+Classification,"{'mlp__alpha': 0.0001, 'mlp__hidden_layer_sizes': (50, 50), 'mlp__learning_rate_init': 0.01}",0.4472399593110947,,,,0.8066666666666666,0.6,0.40298507462686567,0.48214285714285715

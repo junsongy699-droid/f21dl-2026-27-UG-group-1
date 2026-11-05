@@ -22,11 +22,16 @@ The dataset is stored in the `data/` folder.
 ### Repository Structure
 
 ├── code/
-│   ├── data_explore.py          # EDA (correlation analysis, leakage detection, distribution plots)
-│   ├── data_preprocess.py       # Preprocessing pipeline (dedup, leakage removal, imputation, encoding)
-│   ├── clustering.py            # k-means clustering with elbow method & silhouette score
-│   ├── baseline_models.py       # Baseline regression models (Linear Regression, Ridge, Random Forest, kNN)
-│   └── mlp.py                   # Multi-Layer Perceptron neural network
+│   ├── data_explore.py           # EDA (correlation analysis, leakage detection)
+│   ├── data_preprocess.py        # Preprocessing pipeline (dedup, leakage removal, imputation)
+│   ├── clustering.py             # k-means clustering with elbow method & silhouette score
+│   ├── data_loader.py            # Loads + verifies the raw dataset
+│   ├── evaluation.py             # Split / scaling / metrics utilities
+│   ├── baselines_regression.py   # R3 regression baselines (5 models)
+│   ├── baselines_classification.py # R3 classification baselines (5 models)
+│   ├── mlp_model.py              # R4 MLP tuning (regression + classification)
+│   ├── figures.py                # Comparison charts
+│   └── run_all.py                # One-command reproduction (R3 + R4)
 ├── data/
 │   ├── spotifydataset.csv       # Raw dataset
 │   └── processed/
@@ -40,8 +45,8 @@ The dataset is stored in the `data/` folder.
 
 - **R1** Project topic and objectives defined
 - **R2** Data preprocessing, cleaning, EDA, visualisation and k-means clustering
-- **R3** Baseline models: Linear Regression, Ridge, Random Forest, kNN (regression task predicting `track_popularity`)
-- **R4** Multi-Layer Perceptron (MLP) neural network for regression
+- **R3** Baseline models: regression (Linear Regression, Ridge, Decision Tree, Random Forest, kNN) and classification (Logistic Regression, Decision Tree, Random Forest, kNN, Naive Bayes), evaluated with RMSE/MAE/R2 and accuracy/precision/recall/F1
+- **R4** Multi-Layer Perceptron (MLP) neural network for regression and classification, tuned with GridSearchCV + 5-fold cross-validation
 
 ### Generative AI Statement
 
@@ -81,7 +86,7 @@ The preprocessing script (`code/data_preprocess.py`) performs:
 1. Clone the repository
 2. Install dependencies: `pip install pandas numpy scikit-learn matplotlib seaborn`
 3. Run scripts from the `code/` folder in order:
-   `data_explore.py` → `data_preprocess.py` → `clustering.py` → `baseline_models.py` → `mlp.py`
+   `data_explore.py` → `data_preprocess.py` → `clustering.py` → `run_all.py`
 
 ### Known Limitations
 
